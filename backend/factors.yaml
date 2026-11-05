@@ -1,0 +1,151 @@
+# ==============================================================================
+# CARBONMESH V2 EMISSION & SEQUESTRATION FACTORS
+# ==============================================================================
+# Source Provenance: CEA CO2 Baseline Database v19, IPCC AR6, India MoEFCC,
+# ICCT India Transport LCA, and illustrative HackFest 2026 specifications.
+# Note: Factors marked verified=false are assumptions requiring local calibration.
+# ==============================================================================
+
+version: "2.0.0"
+updated_at: "2026-10-28"
+
+electricity:
+  grid_in_karnataka:
+    factor_name: "grid_electricity_karnataka"
+    value: 0.70
+    unit: "kg_co2e_per_kwh"
+    description: "Regional grid electricity average emission intensity for Karnataka / Southern Regional Grid"
+    source_citation: "Central Electricity Authority (CEA) CO2 Baseline Database v19.0 (Weighted Average)"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "measured"
+
+fuel:
+  diesel:
+    factor_name: "fuel_diesel"
+    value: 2.68
+    unit: "kg_co2e_per_litre"
+    description: "High-speed diesel combustion emission factor"
+    source_citation: "IPCC 2006 Guidelines for National GHG Inventories, Vol 2 Energy"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "estimated"
+  petrol:
+    factor_name: "fuel_petrol"
+    value: 2.30
+    unit: "kg_co2e_per_litre"
+    description: "Motor gasoline (petrol) combustion emission factor"
+    source_citation: "IPCC 2006 Guidelines for National GHG Inventories, Vol 2 Energy"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "estimated"
+  cng:
+    factor_name: "fuel_cng"
+    value: 2.75
+    unit: "kg_co2e_per_kg"
+    description: "Compressed Natural Gas automotive combustion"
+    source_citation: "India MoPNG GHG factors"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "estimated"
+  lpg:
+    factor_name: "fuel_lpg"
+    value: 2.98
+    unit: "kg_co2e_per_kg"
+    description: "Liquified Petroleum Gas stationary/commercial combustion"
+    source_citation: "IPCC 2006 Guidelines for National GHG Inventories"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "estimated"
+
+transport:
+  walk:
+    factor_name: "commute_walk"
+    value: 0.00
+    unit: "kg_co2e_per_km"
+    description: "Active transport (zero direct tailpipe emissions)"
+    source_citation: "GHG Protocol Corporate Value Chain Standard"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "measured"
+  bicycle:
+    factor_name: "commute_bicycle"
+    value: 0.00
+    unit: "kg_co2e_per_km"
+    description: "Active pedal transport (zero direct tailpipe emissions)"
+    source_citation: "GHG Protocol Corporate Value Chain Standard"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "measured"
+  two_wheeler:
+    factor_name: "commute_two_wheeler"
+    value: 0.05
+    unit: "kg_co2e_per_km"
+    description: "Average 100-150cc petrol 2-wheeler commuter"
+    source_citation: "ICCT Real-world Two-wheeler Emissions Study India"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "estimated"
+  car:
+    factor_name: "commute_car"
+    value: 0.18
+    unit: "kg_co2e_per_km"
+    description: "Compact/midsize petrol passenger car average"
+    source_citation: "ARAI Automotive Research Association of India & MoRTH"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "estimated"
+  bus:
+    factor_name: "commute_bus"
+    value: 0.06
+    unit: "kg_co2e_per_passenger_km"
+    description: "BMTC Urban transit bus average per passenger-km"
+    source_citation: "BMTC / Centre for Study of Science, Technology and Policy (CSTEP)"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "estimated"
+  metro:
+    factor_name: "commute_metro"
+    value: 0.03
+    unit: "kg_co2e_per_passenger_km"
+    description: "Namma Metro Bengaluru electric heavy rail transit per passenger-km"
+    source_citation: "BMRCL Sustainability & Energy Assessment"
+    version: "2026.1"
+    verified_flag: true
+    quality_tag: "estimated"
+
+sequestration:
+  samputa_biochar:
+    factor_name: "samputa_biochar_sequestration"
+    gross_factor_value: 0.50
+    haircut_percentage: 0.30
+    net_factor_value: 0.35
+    unit: "kg_co2e_per_kg_biochar"
+    description: "Pyrolyzed biomass biochar durable soil carbon sequestration (assumes 50% carbon fraction with 30% durability haircut)"
+    source_citation: "European Biochar Certificate (EBC) & Project Assumption"
+    version: "2026.1"
+    verified_flag: false
+    quality_tag: "assumed"
+    notes: "Requires formal batch lab assay to verify actual fixed carbon fraction and H:Corg ratio."
+
+traditional:
+  matka_clay_cooling:
+    factor_name: "traditional_matka"
+    value: 0.25
+    unit: "kg_co2e_per_day"
+    description: "Evaporative unglazed clay pot water cooling avoiding active 60W domestic refrigerator duty cycle"
+    source_citation: "Indian Traditional Practice Life Cycle Screening (Unverified Assumption)"
+    version: "2026.1"
+    verified_flag: false
+    quality_tag: "assumed"
+    notes: "Assumes 0.36 kWh/day avoided cooling load * 0.70 kg/kWh. Unverified field estimate."
+  handloom_avoidance:
+    factor_name: "traditional_handloom"
+    value: 0.40
+    unit: "kg_co2e_per_meter"
+    description: "Manual pedal-loom weaving avoiding mechanized textile loom electric drive power"
+    source_citation: "Rural Khadi & Village Industries Commission Screening (Unverified Assumption)"
+    version: "2026.1"
+    verified_flag: false
+    quality_tag: "assumed"
+    notes: "Empirical estimate comparing power-loom kWh/meter vs handloom manual drive. Unverified."

@@ -1,0 +1,11 @@
+# CarbonMesh v2 Backend Dependencies
+# Hack Fest 2026 S1 - Green Tech & Sustainability
+
+fastapi>=0.110.0
+pydantic>=2.5.0
+uvicorn>=0.28.0
+websockets>=12.0
+pyyaml>=6.0.1
+requests>=2.31.0
+httpx>=0.27.0
+python-multipart>=0.0.9

@@ -1,0 +1,82 @@
+#include <Arduino.h>
+
+#define US1_TRIG_PIN    12
+#define US1_ECHO_PIN    13
+#define US2_TRIG_PIN    14
+#define US2_ECHO_PIN    27
+#define SOIL_MOISTURE_PIN 34
+
+#define BIN_HEIGHT_CM       30.0
+#define SOIL_DRY_RAW        3500
+#define SOIL_WET_RAW        1200
+
+struct TelemetryData {
+  float binFillPercentage;
+  float secondaryDistanceCm;
+  float moisturePercentage;
+  bool isBinFull;
+};
+
+TelemetryData currentTelemetry;
+
+float readUltrasonicDistance(uint8_t trigPin, uint8_t echoPin) {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  long duration = pulseIn(echoPin, HIGH, 30000);
+  if (duration == 0) return -1.0;
+  return (duration * 0.0343) / 2.0;
+}
+
+float calculateBinFill(float distanceCm) {
+  if (distanceCm < 0) return 0.0;
+  float filledHeight = BIN_HEIGHT_CM - distanceCm;
+  if (filledHeight < 0) filledHeight = 0;
+  float fillPercentage = (filledHeight / BIN_HEIGHT_CM) * 100.0;
+  return (fillPercentage > 100.0) ? 100.0 : fillPercentage;
+}
+
+float readSoilMoisture(uint8_t pin) {
+  int rawADC = analogRead(pin);
+  rawADC = constrain(rawADC, SOIL_WET_RAW, SOIL_DRY_RAW);
+  return map(rawADC, SOIL_DRY_RAW, SOIL_WET_RAW, 0, 100);
+}
+
+void updateSensors() {
+  float dist1 = readUltrasonicDistance(US1_TRIG_PIN, US1_ECHO_PIN);
+  currentTelemetry.binFillPercentage = calculateBinFill(dist1);
+  currentTelemetry.isBinFull = (currentTelemetry.binFillPercentage >= 90.0);
+  currentTelemetry.secondaryDistanceCm = readUltrasonicDistance(US2_TRIG_PIN, US2_ECHO_PIN);
+  currentTelemetry.moisturePercentage = readSoilMoisture(SOIL_MOISTURE_PIN);
+}
+
+void printTelemetryJSON() {
+  Serial.print("{\"binFillPct\": ");
+  Serial.print(currentTelemetry.binFillPercentage, 1);
+  Serial.print(", \"secDistCm\": ");
+  Serial.print(currentTelemetry.secondaryDistanceCm, 1);
+  Serial.print(", \"moisturePct\": ");
+  Serial.print(currentTelemetry.moisturePercentage, 1);
+  Serial.print(", \"isBinFull\": ");
+  Serial.print(currentTelemetry.isBinFull ? "true" : "false");
+  Serial.print(", \"status\": \"OK\"}");
+  Serial.println();
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(US1_TRIG_PIN, OUTPUT);
+  pinMode(US1_ECHO_PIN, INPUT);
+  pinMode(US2_TRIG_PIN, OUTPUT);
+  pinMode(US2_ECHO_PIN, INPUT);
+  pinMode(SOIL_MOISTURE_PIN, INPUT);
+}
+
+void loop() {
+  updateSensors();
+  printTelemetryJSON();
+  delay(1000);
+}

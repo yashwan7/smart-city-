@@ -1,0 +1,157 @@
+#include <Arduino.h>
+#include <lvgl.h>
+#include <TFT_eSPI.h>
+#include <ArduinoJson.h>
+
+#define SCREEN_WIDTH  320
+#define SCREEN_HEIGHT 240
+
+// Hardware CS Pins for Dual TFT Setup
+#define TFT1_CS 5
+#define TFT2_CS 15
+
+// Hardware Serial Interfaces for Child Microcontrollers
+#define RX_URJA    16 // Serial1: ESP32 #2 (Urja Meter)
+#define TX_URJA    17
+#define RX_NXP     25 // Serial2: NXP MCX-N236 (Compost Nest)
+#define TX_NXP     26
+
+TFT_eSPI tft = TFT_eSPI(); 
+static lv_disp_draw_buf_t draw_buf;
+static lv_color_t buf[SCREEN_WIDTH * 10];
+
+// Global Telemetry Data (Aggregated from nodes)
+float urja_kw = 1.85;
+float compost_fill_pct = 45.0;
+float compost_moisture = 78.0;
+float commute_km = 12.5;
+float good_carbon = 3.2;
+float bad_carbon = 2.1;
+
+// LVGL Handles
+lv_obj_t * urja_val_label;
+lv_obj_t * urja_bar;
+lv_obj_t * compost_label;
+
+void my_disp_flush(lv_disp_drv_t *disp, const lv_area_t *area, lv_color_t *color_p) {
+    digitalWrite(TFT2_CS, HIGH);
+    digitalWrite(TFT1_CS, LOW);
+    tft.startWrite();
+    tft.setAddrWindow(area->x1, area->y1, (area->x2 - area->x1 + 1), (area->y2 - area->y1 + 1));
+    tft.pushColors((uint16_t *)&color_p->full, (area->x2 - area->x1 + 1) * (area->y2 - area->y1 + 1), true);
+    tft.endWrite();
+    lv_disp_flush_ready(disp);
+}
+
+void update_second_tft_graphics() {
+    digitalWrite(TFT1_CS, HIGH);
+    digitalWrite(TFT2_CS, LOW);
+
+    // Spectrum Equalizer
+    for (int i = 0; i < 8; i++) {
+        int bar_h = random(10, 65);
+        uint16_t color = (bar_h > 50) ? TFT_RED : ((bar_h > 30) ? TFT_YELLOW : TFT_GREEN);
+        tft.fillRect(15 + (i * 35), 20 + (70 - bar_h), 22, bar_h, color);
+        tft.fillRect(15 + (i * 35), 20, 22, (70 - bar_h), TFT_BLACK);
+    }
+
+    tft.setTextSize(1);
+    tft.setTextColor(TFT_GREENYELLOW, TFT_BLACK);
+    tft.setCursor(15, 205);
+    tft.printf("TELEMETRY SYNC: ACTIVE | FREQ: %d Hz", random(48, 62));
+    digitalWrite(TFT2_CS, HIGH);
+}
+
+void read_serial_telemetry() {
+    // Read ESP32 #2 (Urja Meter)
+    if (Serial1.available()) {
+        StaticJsonDocument<200> doc;
+        DeserializationError err = deserializeJson(doc, Serial1);
+        if (!err) {
+            urja_kw = doc["kw"] | urja_kw;
+        }
+    }
+
+    // Read NXP MCX-N236 (Compost Nest)
+    if (Serial2.available()) {
+        StaticJsonDocument<250> doc;
+        DeserializationError err = deserializeJson(doc, Serial2);
+        if (!err) {
+            compost_fill_pct = doc["binFillPct"] | compost_fill_pct;
+            compost_moisture = doc["moisturePct"] | compost_moisture;
+        }
+    }
+
+    // Read Arduino Uno (Eco Commute) via Primary Serial (USB/UART0)
+    if (Serial.available()) {
+        StaticJsonDocument<200> doc;
+        DeserializationError err = deserializeJson(doc, Serial);
+        if (!err) {
+            commute_km = doc["km"] | commute_km;
+        }
+    }
+}
+
+void update_ui_cb(lv_timer_t * timer) {
+    read_serial_telemetry();
+
+    char kw_str[16];
+    snprintf(kw_str, sizeof(kw_str), "%.2f kW", urja_kw);
+    lv_label_set_text(urja_val_label, kw_str);
+    lv_bar_set_value(urja_bar, (int)((urja_kw / 4.0) * 100), LV_ANIM_ON);
+
+    char comp_str[32];
+    snprintf(comp_str, sizeof(comp_str), "Compost: %.0f%% Ready", compost_moisture);
+    lv_label_set_text(compost_label, comp_str);
+
+    update_second_tft_graphics();
+}
+
+void setup() {
+    Serial.begin(115200);   // Primary Serial (USB / Arduino Uno)
+    Serial1.begin(115200, SERIAL_8N1, RX_URJA, TX_URJA); // ESP32 #2
+    Serial2.begin(115200, SERIAL_8N1, RX_NXP, TX_NXP);   // NXP MCX-N236
+
+    pinMode(TFT1_CS, OUTPUT);
+    pinMode(TFT2_CS, OUTPUT);
+    digitalWrite(TFT1_CS, HIGH);
+    digitalWrite(TFT2_CS, HIGH);
+
+    tft.begin();
+    tft.setRotation(1);
+
+    lv_init();
+    lv_disp_draw_buf_init(&draw_buf, buf, NULL, SCREEN_WIDTH * 10);
+    static lv_disp_drv_t disp_drv;
+    lv_disp_drv_init(&disp_drv);
+    disp_drv.hor_res = SCREEN_WIDTH;
+    disp_drv.ver_res = SCREEN_HEIGHT;
+    disp_drv.flush_cb = my_disp_flush;
+    disp_drv.draw_buf = &draw_buf;
+    lv_disp_drv_register(&disp_drv);
+
+    // Build Minimal Top Bar & Dashboard Base
+    lv_obj_set_style_bg_color(lv_scr_act(), lv_color_make(15, 23, 42), 0);
+    
+    lv_obj_t * urja_card = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(urja_card, 150, 115);
+    lv_obj_align(urja_card, LV_ALIGN_TOP_LEFT, 5, 36);
+    
+    urja_val_label = lv_label_create(urja_card);
+    lv_label_set_text(urja_val_label, "1.85 kW");
+    
+    urja_bar = lv_bar_create(urja_card);
+    lv_obj_set_size(urja_bar, 120, 10);
+    lv_obj_align(urja_bar, LV_ALIGN_TOP_LEFT, 0, 45);
+
+    compost_label = lv_label_create(lv_scr_act());
+    lv_label_set_text(compost_label, "Compost: 78% Ready");
+    lv_obj_align(compost_label, LV_ALIGN_TOP_RIGHT, -10, 40);
+
+    lv_timer_create(update_ui_cb, 500, NULL);
+}
+
+void loop() {
+    lv_timer_handler();
+    delay(5);
+}

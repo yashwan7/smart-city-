@@ -1,0 +1,16 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/api/summary", "destination": "/api/summary.js" },
+    { "source": "/api/breakdown", "destination": "/api/breakdown.js" },
+    { "source": "/api/timeseries", "destination": "/api/timeseries.js" },
+    { "source": "/api/runs/(.*)", "destination": "/api/runs.js" },
+    { "source": "/api/recommendations", "destination": "/api/recommendations.js" },
+    { "source": "/api/copilot", "destination": "/api/copilot.js" },
+    { "source": "/api/ledger/(.*)", "destination": "/api/ledger.js" },
+    { "source": "/api/devices", "destination": "/api/devices.js" }
+  ]
+}
+

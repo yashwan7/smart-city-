@@ -1,0 +1,45 @@
+#include <Arduino.h>
+#include <ArduinoJson.h>
+
+#define CT_SENSOR_PIN 34  // Analog ADC pin for CT sensor / Shunt Voltage
+#define MAINS_VOLTAGE 230.0 // Standard Indian Household Voltage (AC V)
+
+float total_kwh = 14.2;
+unsigned long lastMillis = 0;
+
+float readLivePowerKW() {
+  int rawADC = analogRead(CT_SENSOR_PIN);
+  float voltageRMS = (rawADC / 4095.0) * 3.3;
+  float currentRMS = voltageRMS * 10.0; // Scaled calibration factor
+  float powerWatts = MAINS_VOLTAGE * currentRMS;
+  
+  // Constrain power to sensible household limits
+  if (powerWatts < 80.0) powerWatts = 80.0 + random(0, 20); // Standby load
+  return powerWatts / 1000.0; // Return kW
+}
+
+void setup() {
+  Serial.begin(115200); // Tx to Master ESP32 #1 (Serial1)
+  pinMode(CT_SENSOR_PIN, INPUT);
+}
+
+void loop() {
+  float live_kw = readLivePowerKW();
+
+  // Accumulate kWh
+  if (millis() - lastMillis >= 1000) {
+    total_kwh += (live_kw / 3600.0);
+    lastMillis = millis();
+  }
+
+  // Stream telemetry JSON
+  StaticJsonDocument<128> doc;
+  doc["kw"] = live_kw;
+  doc["kwh"] = total_kwh;
+  doc["node"] = "PowerPulse";
+
+  serializeJson(doc, Serial);
+  Serial.println();
+
+  delay(1000);
+}

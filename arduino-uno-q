@@ -1,0 +1,31 @@
+#include <Arduino.h>
+
+#define DISTANCE_POT_PIN A0  // Analog Potentiometer simulating trip KM input
+#define FUEL_TYPE_PIN    2   // Digital toggle (HIGH = Petrol, LOW = EV)
+
+float km_traveled = 0.0;
+
+void setup() {
+  Serial.begin(115200); // Serial TX to Master ESP32 #1
+  pinMode(DISTANCE_POT_PIN, INPUT);
+  pinMode(FUEL_TYPE_PIN, INPUT_PULLUP);
+}
+
+void loop() {
+  int rawVal = analogRead(DISTANCE_POT_PIN);
+  km_traveled = map(rawVal, 0, 1023, 0, 500) / 10.0; // Maps 0 to 50.0 KM
+
+  bool isPetrol = digitalRead(FUEL_TYPE_PIN) == HIGH;
+  float est_co2 = km_traveled * (isPetrol ? 0.12 : 0.03); // kg CO2 / KM
+
+  // Transmit JSON to Master Controller
+  Serial.print("{\"km\": ");
+  Serial.print(km_traveled, 1);
+  Serial.print(", \"mode\": \"");
+  Serial.print(isPetrol ? "Petrol" : "EV");
+  Serial.print("\", \"co2_kg\": ");
+  Serial.print(est_co2, 2);
+  Serial.println("}");
+
+  delay(1000);
+}
